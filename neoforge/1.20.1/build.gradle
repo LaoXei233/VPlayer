@@ -231,6 +231,8 @@ def fatJarTask = tasks.register('fatJar', Jar) {
         exclude '**/module-info.class'
         // 只保留 Windows 原生库，避免 jar 过大 / 加载冲突
         exclude 'org/bytedeco/opencv/**'
+        exclude '**/*.exe'
+        exclude '**/*.bat'
         exclude 'org/bytedeco/openblas/**'
         exclude 'org/bytedeco/tesseract/**'
         exclude 'org/bytedeco/leptonica/**'
