@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SRS",
+    "rgb",
+    "SLS"
+  ],
+  "key": {
+    "S": "minecraft:smooth_stone",
+    "R": "minecraft:redstone",
+    "r": "minecraft:red_stained_glass_pane",
+    "g": "minecraft:green_stained_glass_pane",
+    "b": "minecraft:blue_stained_glass_pane",
+    "L": "minecraft:redstone_lamp"
+  },
+  "result": {
+    "id": "vplayer:screen",
+    "count": 4
+  }
+}

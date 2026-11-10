@@ -1,0 +1,24 @@
+VPlayer —— Minecraft 1.21.1 / NeoForge 21.1.265 源码
+需要 JDK 21。
+
+构建（Windows）
+  set JAVA_HOME=C:\Program Files\Java\jdk-21
+  gradlew.bat build fatJar --no-daemon
+
+产物
+  build\libs\vplayer-1.0.0-all.jar（约 121MB，已内置 FFmpeg 原生库，可直接分发）
+安装
+  把 jar 放进 .minecraft\mods\
+
+已实现功能
+  视频 URL / 本地文件播放（B站直链，自动带 Referer/UA）
+  播放界面：进度条、暂停、停止、±10 秒、音量、倍速、循环
+  每块屏幕独立的声音范围（上限 40 格）+ 距离衰减
+  多个屏幕方块自动合并成一整块大屏（L 形、缺口等不规则形状也支持）
+  画面严格只显示在方块上，补全整行/整列即可扩大屏幕
+  完整方块造型的显示器（夜里也亮）、合成配方一次给 4 个
+  方块掉落后回到物品栏、暂停后原地续播、3D 方块图标
+
+注意
+  - 首次构建需要联网下载 NeoForge / Minecraft 依赖（国内建议给 Gradle 配镜像和代理）。
+  - 本目录不含 build 产物，需要自己构建。

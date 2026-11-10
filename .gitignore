@@ -1,0 +1,40 @@
+# ---- Gradle / 构建产物 ----
+.gradle/
+build/
+out/
+buildOutputCleanup/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- 运行 / 测试目录 ----
+run/
+run-data/
+run-mctest/
+run-*/
+!run-mctest/README*
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# ---- 日志 / 临时文件 ----
+logs/
+*.log
+*.log.gz
+crash-reports/
+vplayer-selftest*.txt
+vplayer-natives/
+
+# ---- Java ----
+*.class
+
+# ---- 系统 ----
+Thumbs.db
+.DS_Store
+desktop.ini

@@ -1,0 +1,16 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = 'NeoForgedOfficial'
+            url = 'https://maven.neoforged.net/releases'
+        }
+        maven {
+            name = 'ForgeCDN'
+            url = 'https://neoforged.forgecdn.net/releases'
+        }
+        mavenLocal()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'vplayer'

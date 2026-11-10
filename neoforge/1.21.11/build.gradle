@@ -1,0 +1,150 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// ---------------------------------------------------------------------------
+// 本机 maven.neoforged.net 的 DNS 被污染（解析到无效 IP），无法直连。
+// 官方 CDN 镜像 neoforged.forgecdn.net 完整镜像了 /releases 与 /mojang-meta 两个根，
+// 所以把所有指向 maven.neoforged.net 的仓库地址整体替换成镜像地址。
+// ---------------------------------------------------------------------------
+def MIRROR_ROOT = 'https://neoforged.forgecdn.net'
+def MIRROR_HOST = 'maven.neoforged.net'
+def rewriteNeoForgedRepo = { repo ->
+    if (repo instanceof MavenArtifactRepository) {
+        String u = repo.url.toString()
+        int i = u.indexOf(MIRROR_HOST)
+        if (i >= 0) {
+            String mirrored = MIRROR_ROOT + u.substring(i + MIRROR_HOST.length())
+            repo.url = mirrored
+            logger.lifecycle("[vplayer] 仓库镜像: ${u} -> ${mirrored}")
+        }
+    }
+}
+repositories.all(rewriteNeoForgedRepo)
+repositories.configureEach(rewriteNeoForgedRepo)
+
+repositories {
+    mavenCentral()
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            // 隔离测试实例目录（不碰你自己的游戏目录）
+            gameDirectory = project.file('run-mctest')
+            programArguments.addAll '--username', 'Dev', '--uid', '12345678-1234-1234-1234-123456789012'
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    // JavaCV + FFmpeg：视频解码/播放（fatJar 会把需要的原生库打进去）
+    implementation 'org.bytedeco:javacv-platform:1.5.11'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': 'VPlayer',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 可分发 fatJar：模组本体 + JavaCV/FFmpeg 类与原生库
+// 只保留 ffmpeg + javacpp（多余模块会导致原生库加载冲突），并排除其他平台，
+// 与 1.21.1 / 1.20.1 成品保持一致。
+// ---------------------------------------------------------------------------
+tasks.register('fatJar', Jar) {
+    dependsOn tasks.jar
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from sourceSets.main.output
+    from(zipTree(tasks.jar.archiveFile)) {
+        exclude 'META-INF/MANIFEST.MF'
+    }
+
+    def nativeLibs = configurations.runtimeClasspath.filter {
+        it.name.contains('javacv') || it.name.contains('ffmpeg') || it.name.contains('javacpp') || it.name.contains('opencv')
+    }
+    from(nativeLibs.collect { zipTree(it) }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/*.SF'
+        exclude 'META-INF/*.DSA'
+        exclude 'META-INF/*.RSA'
+        exclude '**/module-info.class'
+        exclude 'org/bytedeco/opencv/**'
+        exclude 'org/bytedeco/openblas/**'
+        exclude 'org/bytedeco/tesseract/**'
+        exclude 'org/bytedeco/leptonica/**'
+        exclude 'org/bytedeco/flycapture/**'
+        exclude 'org/bytedeco/libdc1394/**'
+        exclude 'org/bytedeco/libfreenect/**'
+        exclude 'org/bytedeco/libfreenect2/**'
+        exclude 'org/bytedeco/librealsense/**'
+        exclude 'org/bytedeco/librealsense2/**'
+        exclude 'org/bytedeco/videoinput/**'
+        exclude 'org/bytedeco/artoolkitplus/**'
+        exclude 'org/bytedeco/*/linux-*/*'
+        exclude 'org/bytedeco/*/macosx-*/*'
+    }
+
+    manifest {
+        attributes(
+                'Implementation-Title': 'VPlayer',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
+// 展开 mods.toml 中的 ${} 占位符
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata

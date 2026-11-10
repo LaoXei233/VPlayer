@@ -1,0 +1,135 @@
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+// Minecraft 1.20.1 官方发行版就是 Java 17
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                vplayer {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                vplayer {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+repositories {
+    maven {
+        name = 'MinecraftForge'
+        url = 'https://maven.minecraftforge.net/'
+    }
+    mavenCentral()
+}
+
+configurations {
+    natives
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${forge_version}"
+    // 编译只需要 JavaCV/FFmpeg 的 Java 类；platform 工件（含全部平台原生库）只用于 fatJar 打包。
+    // 注意：compileOnly 的依赖会进入 reobfJar 的 --lib 参数，用 platform 会让命令行超长（Windows 32K 限制）。
+    compileOnly 'org.bytedeco:javacv:1.5.11'
+    natives 'org.bytedeco:javacv-platform:1.5.11'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': 'VPlayer',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 可分发 fatJar：模组本体（已 reobf 成 SRG 名） + JavaCV/FFmpeg 类与原生库。
+// 只保留 Windows 的 ffmpeg + javacpp（64 个 dll）；多余的 opencv/tesseract 等模块会导致
+// 原生库加载冲突，其它平台的原生库只会让 jar 变大，一并排除（与 1.21.1 成品保持一致）。
+// 注意：类必须只从 build/reobfJar/output.jar 取（已 reobf）；混入未 reobf 的类会在
+// 运行时抛 NoSuchFieldError / NoSuchMethodError。
+// ---------------------------------------------------------------------------
+def fatJarTask = tasks.register('fatJar', Jar) {
+    dependsOn tasks.jar
+    dependsOn tasks.reobfJar
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // 资源（assets/data/pack.mcmeta/META-INF/mods.toml）直接取自源码；类取自 reobf 产物
+    from(sourceSets.main.output.resourcesDir)
+    from(zipTree(file("$buildDir/reobfJar/output.jar"))) {
+        exclude 'META-INF/MANIFEST.MF'
+    }
+
+    from({
+        configurations.natives.filter {
+            it.name.contains('javacv') || it.name.contains('ffmpeg') || it.name.contains('javacpp') || it.name.contains('opencv')
+        }.collect { zipTree(it) }
+    }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/*.SF'
+        exclude 'META-INF/*.DSA'
+        exclude 'META-INF/*.RSA'
+        exclude '**/module-info.class'
+        exclude 'org/bytedeco/opencv/**'
+        exclude 'org/bytedeco/openblas/**'
+        exclude 'org/bytedeco/tesseract/**'
+        exclude 'org/bytedeco/leptonica/**'
+        exclude 'org/bytedeco/flycapture/**'
+        exclude 'org/bytedeco/libdc1394/**'
+        exclude 'org/bytedeco/libfreenect/**'
+        exclude 'org/bytedeco/libfreenect2/**'
+        exclude 'org/bytedeco/librealsense/**'
+        exclude 'org/bytedeco/librealsense2/**'
+        exclude 'org/bytedeco/videoinput/**'
+        exclude 'org/bytedeco/artoolkitplus/**'
+        exclude 'org/bytedeco/*/linux-*/*'
+        exclude 'org/bytedeco/*/macosx-*/*'
+    }
+
+    manifest {
+        attributes(
+                'Implementation-Title': 'VPlayer',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
+// fatJar 依赖 reobfJar（reobfJar 需要 jar），保证 build fatJar 时顺序正确
+tasks.named('fatJar') {
+    doLast {
+        logger.lifecycle("[vplayer] fatJar 完成: ${archiveFile.get().asFile} (${archiveFile.get().asFile.length()} 字节)")
+    }
+}

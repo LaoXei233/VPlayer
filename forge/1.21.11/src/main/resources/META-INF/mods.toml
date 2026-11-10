@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[61,)"
+license="MIT"
+
+[[mods]]
+modId="vplayer"
+version="1.0.0"
+displayName="VPlayer Video Player"
+authors="VPlayer Team"
+description='''In-game video player for Minecraft screens.
+Plays video URLs or local files on multi-block screens, with its own audio.
+Supports any connected screen shape, per-screen audio range, speed and looping.'''
+
+[[dependencies.vplayer]]
+    modId="forge"
+    mandatory=true
+    versionRange="[61,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.vplayer]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.21.11,1.22,)"
+    ordering="NONE"
+    side="BOTH"

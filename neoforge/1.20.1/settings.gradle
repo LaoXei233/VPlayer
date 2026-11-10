@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        // 官方 CDN 镜像（本机 maven.neoforged.net 的 DNS 被污染，无法直连）
+        maven {
+            name = 'NeoForgedMirror'
+            url = 'https://neoforged.forgecdn.net/releases'
+        }
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'vplayer'

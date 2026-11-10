@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="vplayer"
+version="${file.jarVersion}"
+displayName="VPlayer Video Player"
+authors="VPlayer Team"
+description='''Play local and network videos on in-game screens, like VRChat video players.
+Place a Screen block, right-click it, enter a video URL or local file path, and press Play.'''
+
+[[dependencies.vplayer]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.vplayer]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"

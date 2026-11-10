@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "vplayer:item/screen_side"
+  },
+  "elements": []
+}

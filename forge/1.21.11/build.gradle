@@ -1,0 +1,131 @@
+// VPlayer - Minecraft 1.21.11 + Forge 61.2.5
+//
+// 构建骨架来自官方 Forge 1.21.11-61.2.5 MDK（ForgeGradle 7 + Gradle 9.5.0 + Java 21）。
+// 1.21.11 运行时就是 official 映射，不需要 reobf；fatJar 的类直接取 sourceSets.main.output。
+//
+// 注意：ForgeGradle 7 的 Minecraft Mavenizer 工具本身要求 Java 25 工具链，
+// 本机 JDK 25 路径写在 gradle.properties 的 org.gradle.java.installations.paths 里。
+
+plugins {
+    id 'java'
+    id 'idea'
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version '[7.0.3,8)'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+// Minecraft 1.21.11 要求 Java 21
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+
+    runs {
+        configureEach {
+            workingDir = layout.projectDirectory.dir('run')
+            systemProperty 'eventbus.api.strictRuntimeChecks', 'true'
+            systemProperty 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        register('client')
+
+        register('server') {
+            args '--nogui'
+        }
+    }
+}
+
+repositories {
+    minecraft.mavenizer(it) // 必须放在最前面（ForgeGradle 7 要求 Mavenizer 仓库优先级最高）
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+    mavenCentral()
+}
+
+configurations {
+    natives
+}
+
+dependencies {
+    implementation minecraft.dependency("net.minecraftforge:forge:${minecraft_version}-${forge_version}")
+    annotationProcessor 'net.minecraftforge:eventbus-validator:7.0.5'
+
+    // 编译只需要 JavaCV/FFmpeg 的 Java 类；platform 工件（含全部平台原生库）只用于 fatJar 打包
+    compileOnly 'org.bytedeco:javacv:1.5.11'
+    natives 'org.bytedeco:javacv-platform:1.5.11'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // Use the UTF-8 charset for Java compilation
+    // This is done by default in Java 18+, but this ensures it no matter the Java or Gradle version
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': 'VPlayer',
+                'Implementation-Version': project.version
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 可分发 fatJar：模组本体 + JavaCV/FFmpeg 类与原生库。
+// 1.21.11 Forge 运行时就是 official 映射（不需要 reobf），所以类直接取自 sourceSets.main.output。
+// 只保留 Windows 的 ffmpeg + javacpp（64 个 dll），排除 opencv/tesseract/openblas
+// 等多余模块（会导致原生库加载冲突）与其它平台原生库。
+// ---------------------------------------------------------------------------
+tasks.register('fatJar', Jar) {
+    dependsOn tasks.jar
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // 模组类 + 资源（assets/data/pack.mcmeta/META-INF/mods.toml）
+    from(sourceSets.main.output)
+
+    from({
+        configurations.natives.filter {
+            it.name.contains('javacv') || it.name.contains('ffmpeg') || it.name.contains('javacpp') || it.name.contains('opencv')
+        }.collect { zipTree(it) }
+    }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/*.SF'
+        exclude 'META-INF/*.DSA'
+        exclude 'META-INF/*.RSA'
+        exclude '**/module-info.class'
+        exclude 'org/bytedeco/opencv/**'
+        exclude 'org/bytedeco/openblas/**'
+        exclude 'org/bytedeco/tesseract/**'
+        exclude 'org/bytedeco/leptonica/**'
+        exclude 'org/bytedeco/flycapture/**'
+        exclude 'org/bytedeco/libdc1394/**'
+        exclude 'org/bytedeco/libfreenect/**'
+        exclude 'org/bytedeco/libfreenect2/**'
+        exclude 'org/bytedeco/librealsense/**'
+        exclude 'org/bytedeco/librealsense2/**'
+        exclude 'org/bytedeco/videoinput/**'
+        exclude 'org/bytedeco/artoolkitplus/**'
+        exclude 'org/bytedeco/*/linux-*/*'
+        exclude 'org/bytedeco/*/macosx-*/*'
+    }
+
+    manifest {
+        attributes(
+                'Implementation-Title': 'VPlayer',
+                'Implementation-Version': project.version
+        )
+    }
+
+    doLast {
+        logger.lifecycle("[vplayer] fatJar 完成: ${archiveFile.get().asFile} (${archiveFile.get().asFile.length()} 字节)")
+    }
+}
