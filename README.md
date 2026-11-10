@@ -58,7 +58,7 @@
 产物在 `build/libs/`：
 
 - `vplayer-1.0.0.jar`：瘦 jar（只有模组自身代码/资源）
-- `vplayer-1.0.0-all.jar`：**可分发成品**，内含 Windows 版 FFmpeg/JavaCV 原生库（约 122 MB），
+- `vplayer-1.0.0-all.jar`：**可分发成品**，内含 Windows 版 FFmpeg/JavaCV 原生库（约 116 MB），
   直接丢进 `mods/` 即可
 
 > 各版本构建环境与坑见对应目录的构建说明，例如：
